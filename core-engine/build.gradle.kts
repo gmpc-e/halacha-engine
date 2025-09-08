@@ -1,9 +1,26 @@
-plugins { kotlin("jvm") }
-java { toolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
-dependencies {
-    implementation("com.github.KosherJava:zmanim:2.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-    testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+plugins {
+    kotlin("jvm") // inherits version (2.0.21) from root
 }
-tasks.test { useJUnitPlatform() }
+
+kotlin {
+    jvmToolchain(17)
+}
+
+// No repositories block here — settings.gradle.kts owns it.
+
+dependencies {
+    // JSON
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+
+    // JSON Schema validation
+    implementation("com.github.erosb:everit-json-schema:1.14.6")
+    implementation("org.json:json:20240303")
+
+    testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
