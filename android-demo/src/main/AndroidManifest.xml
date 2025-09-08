@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.elad.halacha.demo">
+    <application android:label="Halacha Demo"></application>
+</manifest>
