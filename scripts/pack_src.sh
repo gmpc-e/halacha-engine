@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Where to write the archive
-OUT="${1:-halacha-engine_sources_$(date +%Y%m%d_%H%M).zip}"
+# Where to write the archive (into the current running folder)
+OUT="$(pwd)/${1:-halacha-engine_sources_$(date +%Y%m%d_%H%M).zip}"
 
 # Root of the repo
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,6 +37,7 @@ find "$STAGE" -name .kotlin -type d -prune -exec rm -rf {} +
 
 # Zip it
 cd "$STAGE"
-zip -r "../$OUT" . > /dev/null
+zip -r "$OUT" . > /dev/null
 
 echo "Packed sources -> $OUT"
+

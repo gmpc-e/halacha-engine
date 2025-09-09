@@ -1,9 +1,17 @@
 pluginManagement {
-    repositories { gradlePluginPortal(); google(); mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { google(); mavenCentral(); maven { url = uri("https://jitpack.io") } }
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        // Keep google() for Android modules; server modules just use mavenCentral()
+        google()
+        mavenCentral()
+    }
 }
 rootProject.name = "halacha-engine"
 include(":core-engine", ":profiles", ":rest-api", ":android-demo")

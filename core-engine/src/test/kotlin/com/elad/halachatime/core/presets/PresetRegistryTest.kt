@@ -1,136 +1,116 @@
 package com.elad.halachatime.core.presets
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import org.everit.json.schema.Schema
 import org.everit.json.schema.loader.SchemaLoader
 import org.json.JSONObject
 import org.json.JSONTokener
-import java.net.URL
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
-// --- Models (use your existing Models.kt if it already defines these) ---
-data class HalachicSource(val ref: String, val summary: String)
-
-enum class ZmanMethodKey {
-    ALOT_HASHACHAR, NETZ, SHEMA_END, TEFILLAH_END,
-    CHATZOT, MINCHA_GEDOLA, MINCHA_KETANA, PLAG, SHKIA, TZEIT
-}
-
-data class MethodDefinition(
-    val key: ZmanMethodKey,
-    val description: String,
-    val kosherJavaMethod: String,
-    val sources: List<HalachicSource> = emptyList()
-)
-
-data class BoardProfile(
-    val key: String,
-    val displayName: String,
-    val localeNotes: Map<String, String> = emptyMap(),
-    val methods: List<MethodDefinition>
-)
-// -----------------------------------------------------------------------
-
-/**
- * Loads presets:
- * 1) built-ins from classpath "/profiles"
- * 2) external dir (System prop "preset.dir" or env "PRESET_DIR"), overriding by key
- * Validates all JSONs against /schemas/board-preset.schema.json (draft-07).
- */
 class PresetRegistry(
-    private val schemaResourcePath: String = "/schemas/board-preset.schema.json",
-    private val builtinsResourceDir: String = "profiles",
-    private val externalDir: Path? = resolveExternalDir()
+    private val externalDirs: List<Path> = emptyList()
 ) {
-    private val mapper = jacksonObjectMapper()
-    private val schema: Schema
-    private val profiles: MutableMap<String, BoardProfile> = linkedMapOf()
+    private val mapper = jacksonObjectMapper().apply {
+        findAndRegisterModules()
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+    }
 
-    companion object {
-        private fun resolveExternalDir(): Path? {
-            val sys = System.getProperty("preset.dir")?.trim().takeUnless { it.isNullOrEmpty() }
-            val env = System.getenv("PRESET_DIR")?.trim().takeUnless { it.isNullOrEmpty() }
-            val chosen = sys ?: env
-            return chosen?.let { Path.of(it) }
+    private val schema by lazy {
+        val schemaStream = javaClass.getResourceAsStream("/schemas/board-preset.schema.json")
+            ?: error("Missing JSON schema on classpath: /schemas/board-preset.schema.json")
+        schemaStream.use {
+            SchemaLoader.builder()
+                .schemaJson(JSONObject(JSONTokener(it)))
+                .draftV7Support() // draft-07
+                .build()
+                .load()
+                .build()
         }
     }
 
-    init {
-        // Load schema
-        val schemaStream = javaClass.getResourceAsStream(schemaResourcePath)
-            ?: error("Schema not found at $schemaResourcePath")
-        val schemaJson = JSONObject(JSONTokener(schemaStream))
-        schema = SchemaLoader.load(schemaJson)
+    private val byKey: Map<String, BoardPreset> by lazy {
+        // 1) Load built-ins from classpath: /profiles/*.json
+        val builtins = loadClasspathProfiles("/profiles")
 
-        // 1) built-ins
-        loadBuiltinsFromClasspath(builtinsResourceDir).forEach { bytes ->
-            validateThenPut(bytes)
-        }
-
-        // 2) external overrides
-        externalDir?.takeIf { Files.exists(it) && it.isDirectory() }?.let { dir ->
-            Files.walk(dir).use { paths ->
-                paths.filter { it.isRegularFile() && it.toString().endsWith(".json") }
-                    .forEach { p -> validateThenPut(Files.readAllBytes(p)) }
+        // 2) Load external overrides/additions from provided directories
+        val externals = externalDirs
+            .flatMap { dir ->
+                if (!Files.exists(dir)) emptyList()
+                else Files.walk(dir)
+                    .filter { it.isRegularFile() && it.fileName.toString().lowercase().endsWith(".json") }
+                    .map { it to Files.newInputStream(it) }
+                    .use { seq -> seq.map { (p, s) -> p.fileName.toString() to s }.toList() }
             }
-        }
+            .flatMap { (name, stream) ->
+                stream.use { listOf(readAndValidate(it)) }
+            }
+            .associateBy { it.key }
+
+        // 3) Merge: external wins on same key; union on new keys
+        val merged = HashMap<String, BoardPreset>()
+        for (p in builtins) merged[p.key] = p
+        for ((k, v) in externals) merged[k] = v
+        merged.toMap()
     }
 
-    fun get(key: String): BoardProfile? = profiles[key]
-    fun keys(): Set<String> = profiles.keys
+    fun list(): List<BoardPreset> = byKey.values.sortedBy { it.key }
+    fun get(key: String): BoardPreset? = byKey[key]
 
+    private fun loadClasspathProfiles(root: String): List<BoardPreset> {
+        // Works both from classes directory and from a JAR
+        val url = javaClass.getResource(root) ?: return emptyList()
+        val protocol = url.protocol
+        val out = mutableListOf<BoardPreset>()
 
-    // --- helpers ---
-
-    private fun validateThenPut(bytes: ByteArray) {
-        val obj = JSONObject(JSONTokener(bytes.inputStream()))
-        schema.validate(obj) // throws on invalid
-        val model: BoardProfile = mapper.readValue(bytes) // throws on bad enum
-        profiles[model.key] = model // external overrides built-in
-    }
-
-    private fun loadBuiltinsFromClasspath(resourceDir: String): List<ByteArray> {
-        val out = mutableListOf<ByteArray>()
-        val resources: java.util.Enumeration<URL> =
-            Thread.currentThread().contextClassLoader.getResources(resourceDir)
-
-        while (resources.hasMoreElements()) {
-            val url = resources.nextElement()
-            when (url.protocol) {
-                "file" -> {
-                    val root = Path.of(url.toURI())
-                    if (Files.exists(root) && Files.isDirectory(root)) {
-                        Files.walk(root).use { paths ->
-                            paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".json") }
-                                .forEach { out += Files.readAllBytes(it) }
-                        }
+        if (protocol == "jar") {
+            // Running from a jar
+            val path = url.path // e.g. "file:/.../app.jar!/profiles"
+            val bang = path.indexOf("!")
+            val jarPath = path.substring(5, bang) // strip "file:"
+            val inside = path.substring(bang + 2) // strip "!/"
+            JarFile(jarPath).use { jf ->
+                jf.stream().forEach { entry ->
+                    if (!entry.isDirectory && entry.name.startsWith("$inside/") && entry.name.lowercase().endsWith(".json")) {
+                        jf.getInputStream(entry).use { out += readAndValidate(it) }
                     }
                 }
-                "jar" -> {
-                    val path = url.path
-                    val jarPath = path.substringAfter("jar:file:").substringBefore("!")
-                    val inside = path.substringAfter("!").removePrefix("/")
-
-                    JarFile(jarPath).use { jf ->
-                        jf.entries().asSequence()
-                            .filter { entry ->
-                                !entry.isDirectory &&
-                                        entry.name.startsWith("$inside/") &&
-                                        entry.name.lowercase().endsWith(".json")
-                            }
-                            .forEach { entry ->
-                                jf.getInputStream(entry).use { out += it.readAllBytes() }
-                            }
-                    }
+            }
+        } else {
+            // Running from classes dir
+            val dirUrl = javaClass.getResource("$root/") ?: return emptyList()
+            val dirPath = Path.of(dirUrl.toURI())
+            if (dirPath.isDirectory()) {
+                Files.list(dirPath).use { paths ->
+                    paths.filter { it.isRegularFile() && it.fileName.toString().lowercase().endsWith(".json") }
+                        .forEach { p -> Files.newInputStream(p).use { out += readAndValidate(it) } }
                 }
             }
         }
         return out
     }
 
+    private fun readAndValidate(stream: InputStream): BoardPreset {
+        val text = stream.reader(Charsets.UTF_8).readText()
+        val json = JSONObject(text)
+        schema.validate(json) // throws on invalid
+        return mapper.readValue<BoardPreset>(text)
+    }
+
+    companion object {
+        fun fromDefaultLocations(): PresetRegistry {
+            val cwd = Path.of("").toAbsolutePath().normalize()
+            val candidates = listOf(
+                cwd.resolve("profiles"),
+                cwd.resolve("profiles/builtin"),
+                cwd.resolve("profiles/community")
+            ).filter { Files.exists(it) }
+            return PresetRegistry(externalDirs = candidates)
+        }
+    }
 }
