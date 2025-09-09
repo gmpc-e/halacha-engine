@@ -1,25 +1,30 @@
 plugins {
-    application
     kotlin("jvm")
+    application
 }
 
-java {
-    toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
-}
-
-application {
-    // Entry point for `./gradlew :rest-api:run`
-    mainClass.set("com.elad.halacha.rest.ServerKt")
+repositories {
+    mavenCentral()
 }
 
 dependencies {
     implementation(project(":core-engine"))
 
-    // Ktor server (no Ktor Gradle plugin needed)
-    implementation("io.ktor:ktor-server-core-jvm:3.0.1")
-    implementation("io.ktor:ktor-server-netty-jvm:3.0.1")
-    implementation("io.ktor:ktor-server-content-negotiation:3.0.1")
-    implementation("io.ktor:ktor-serialization-jackson:3.0.1")
+    val ktor = "3.0.1"
+    implementation("io.ktor:ktor-server-core:$ktor")
+    implementation("io.ktor:ktor-server-netty:$ktor")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktor")
+    implementation("io.ktor:ktor-serialization-jackson:$ktor")
+    implementation("io.ktor:ktor-server-status-pages:$ktor")
 
-    testImplementation(kotlin("test"))
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2")
+    implementation("ch.qos.logback:logback-classic:1.5.6")
+}
+
+application {
+    mainClass.set("com.elad.halacha.rest.ServerKt")
+}
+
+kotlin {
+    jvmToolchain(17)
 }
