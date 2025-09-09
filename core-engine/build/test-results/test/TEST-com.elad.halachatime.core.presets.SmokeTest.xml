@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.elad.halachatime.core.presets.SmokeTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-09-08T20:16:14.129Z" hostname="Elkess-Air.lan" time="0.019">
-  <properties/>
-  <testcase name="additionWorks()" classname="com.elad.halachatime.core.presets.SmokeTest" time="0.019"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

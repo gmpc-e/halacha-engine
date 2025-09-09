@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Android/IDE
+.local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin/Java
+out/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python venv just in case
+.venv/
+

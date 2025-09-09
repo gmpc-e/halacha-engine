@@ -1,0 +1,13 @@
+{
+  "key": "OR_HACHAIM",
+  "displayName": "Or HaChaim (Luach Maor)",
+  "sofZmanReference": "GRA",
+  "alosMode": { "type": "DEGREES", "value": 16.1 },
+  "tzeitMode": { "type": "DEGREES", "value": 8.5 },
+  "misheyakirMinutes": 30,
+  "localeNotes": {
+    "en": "Common preset used in Israel luachim; sea-level sunrise/sunset with 8.5° tzeit.",
+    "he": "פריסט נפוץ בלוחות בארץ; זריחה/שקיעה בגובה פני הים וטzeit 8.5°."
+  },
+  "notes": "Tune degrees per community if needed."
+}
