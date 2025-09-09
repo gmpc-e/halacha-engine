@@ -1,20 +1,26 @@
 package com.elad.halachatime.core.presets
 
-enum class SofZmanRef { GRA, MGA, BAAL_HA_TANYA, ATERET_TORAH, CUSTOM }
-enum class OffsetType { FIXED_MINUTES, DEGREES, ZMANI_MINUTES, THREE_STARS, NONE }
-
-data class OffsetMode(
-    val type: OffsetType,
-    val value: Double? = null
-)
+import com.fasterxml.jackson.annotation.JsonAlias
 
 data class BoardPreset(
     val key: String,
     val displayName: String,
-    val sofZmanReference: SofZmanRef,
-    val alosMode: OffsetMode = OffsetMode(OffsetType.NONE),
-    val tzeitMode: OffsetMode = OffsetMode(OffsetType.NONE),
-    val misheyakirMinutes: Int? = null,
-    val localeNotes: Map<String, String> = emptyMap(),
-    val notes: String? = null
+    val dayModel: String? = null,
+
+    // v2 canonical field is "items". We also accept "zmanim" in JSON.
+    @JsonAlias("zmanim")
+    val items: List<BoardItem> = emptyList(),
+
+    val options: Map<String, Any?>? = null,
+    val notes: Map<String, String>? = null
+)
+
+data class BoardItem(
+    val id: String,
+    val label: Map<String, String>? = null,
+    val resolver: Map<String, Any?>? = null,
+    val visible: Boolean? = null,
+    val order: Int? = null,
+    val kosherJavaMethod: String? = null,
+    val notes: Map<String, String>? = null
 )

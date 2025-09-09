@@ -1,0 +1,39 @@
+{
+  "key": "ATERET_TORAH",
+  "displayName": "Ateret Torah",
+  "dayModel": "ALOS_TO_TZAIS",
+  "zmanim": [
+    { "id":"ALOT_HASHACHAR",
+      "resolver":{"type":"DEGREES","value":16.1,"method":"ALOS"},
+      "label":{"he":"עלות 16.1°","en":"Alos 16.1°"},
+      "order":10, "kosherJavaMethod":"getAlos16Point1Degrees"
+    },
+    { "id":"MISHEYAKIR",
+      "resolver":{"type":"DEGREES","value":11.5,"method":"MISHEYAKIR"},
+      "label":{"he":"משיכיר 11.5°","en":"Misheyakir 11.5°"},
+      "order":20, "kosherJavaMethod":"getMisheyakir11Point5Degrees"
+    },
+    { "id":"SHEMA_END",
+      "resolver":{"type":"FORMULA","value":"GRA_SHEMA"},
+      "label":{"he":"סו\"ז ק\"ש (גר\"א)","en":"Sof Zman Shema (GRA)"},
+      "order":40, "kosherJavaMethod":"getSofZmanShmaGRA"
+    },
+    { "id":"TEFILLA_END",
+      "resolver":{"type":"FORMULA","value":"GRA_TEFILLA"},
+      "label":{"he":"סו\"ז תפילה (גר\"א)","en":"Sof Zman Tefillah (GRA)"},
+      "order":50, "kosherJavaMethod":"getSofZmanTfilaGRA"
+    },
+    { "id":"PLAG",
+      "resolver":{"type":"FORMULA","value":"PLAG_ATERET_TORAH"},
+      "label":{"he":"פלג (עטרת תורה)","en":"Plag (Ateret Torah)"},
+      "order":160, "kosherJavaMethod":"getPlagHaminchaAteretTorah",
+      "notes":{"en":"You can configure sunset offset with setAteretTorahSunsetOffset()."}
+    },
+    { "id":"TZEIT",
+      "resolver":{"type":"FORMULA","value":"CUSTOM_ATERET_TORAH_TZAIS"},
+      "label":{"he":"צאת (עטרת תורה)","en":"Tzais (Ateret Torah)"},
+      "order":200, "kosherJavaMethod":"getTzaisAteretTorah"
+    }
+  ],
+  "options":{"sunriseSet":["SEA_LEVEL","ELEVATION_ADJUSTED"],"defaultMisheyakirDeg":11.5}
+}

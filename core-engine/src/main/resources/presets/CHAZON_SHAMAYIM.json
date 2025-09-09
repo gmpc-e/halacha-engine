@@ -1,0 +1,154 @@
+{
+  "key": "CHAZON_SHAMAYIM",
+  "displayName": "Chazon Shamayim",
+  "dayModel": "SUNRISE_TO_SUNSET",
+  "zmanim": [
+    {
+      "id": "ALOT_HASHACHAR",
+      "resolver": { "type": "DEGREES", "value": 16.1, "method": "ALOS" },
+      "label": { "he": "עלות השחר", "en": "Alot Hashachar" },
+      "kosherJavaMethod": "getAlos16Point1Degrees",
+      "visible": true,
+      "order": 10
+    },
+    {
+      "id": "MISHEYAKIR",
+      "resolver": { "type": "DEGREES", "value": 11.5, "method": "MISHEYAKIR" },
+      "label": { "he": "משיכיר", "en": "Misheyakir" },
+      "kosherJavaMethod": "getMisheyakir11Point5Degrees",
+      "visible": true,
+      "order": 20
+    },
+
+    {
+      "id": "SUNRISE_SEA_LEVEL",
+      "resolver": { "type": "FORMULA", "value": "SUNRISE_SEA" },
+      "label": { "he": "זריחה מישורית", "en": "Sea-level sunrise" },
+      "kosherJavaMethod": "getSeaLevelSunrise",
+      "visible": true,
+      "order": 30
+    },
+    {
+      "id": "SUNRISE_VISIBLE",
+      "resolver": { "type": "FORMULA", "value": "SUNRISE_VISIBLE" },
+      "label": { "he": "זריחה הנראית (קירוב)", "en": "Visible sunrise (proxy)" },
+      "kosherJavaMethod": "getSunrise",
+      "visible": false,
+      "order": 35
+    },
+    {
+      "id": "SUNSET_SEA_LEVEL",
+      "resolver": { "type": "FORMULA", "value": "SUNSET_SEA" },
+      "label": { "he": "שקיעה מישורית", "en": "Sea-level sunset" },
+      "kosherJavaMethod": "getSeaLevelSunset",
+      "visible": true,
+      "order": 160
+    },
+    {
+      "id": "SUNSET_VISIBLE",
+      "resolver": { "type": "FORMULA", "value": "SUNSET_VISIBLE" },
+      "label": { "he": "שקיעה הנראית (קירוב)", "en": "Visible sunset (proxy)" },
+      "kosherJavaMethod": "getSunset",
+      "visible": false,
+      "order": 165
+    },
+
+    {
+      "id": "SHEMA_END_MGA",
+      "resolver": { "type": "FORMULA", "value": "MGA_SHEMA" },
+      "label": { "he": "סו\"ז ק\"ש (מג\"א)", "en": "Sof Zman Shema (MGA)" },
+      "kosherJavaMethod": "getSofZmanShmaMGA",
+      "visible": true,
+      "order": 40
+    },
+    {
+      "id": "SHEMA_END_MGA_19P8D",
+      "resolver": { "type": "FORMULA", "value": "MGA_SHEMA_19P8D" },
+      "label": { "he": "סו\"ז ק\"ש (מג\"א 19.8°)", "en": "Sof Zman Shema (MGA 19.8°)" },
+      "kosherJavaMethod": "getSofZmanShmaMGA19Point8Degrees",
+      "visible": false,
+      "order": 45
+    },
+    {
+      "id": "SHEMA_END_GRA",
+      "resolver": { "type": "FORMULA", "value": "GRA_SHEMA" },
+      "label": { "he": "סו\"ז ק\"ש (גר\"א)", "en": "Sof Zman Shema (GRA)" },
+      "kosherJavaMethod": "getSofZmanShmaGRA",
+      "visible": true,
+      "order": 50
+    },
+
+    {
+      "id": "TEFILLA_END_MGA_19P8D",
+      "resolver": { "type": "FORMULA", "value": "MGA_TEFILLA_19P8D" },
+      "label": { "he": "סו\"ז תפילה (מג\"א 19.8°)", "en": "Sof Zman Tefillah (MGA 19.8°)" },
+      "kosherJavaMethod": "getSofZmanTfilaMGA19Point8Degrees",
+      "visible": false,
+      "order": 60
+    },
+    {
+      "id": "TEFILLA_END_GRA",
+      "resolver": { "type": "FORMULA", "value": "GRA_TEFILLA" },
+      "label": { "he": "סו\"ז תפילה (גר\"א)", "en": "Sof Zman Tefillah (GRA)" },
+      "kosherJavaMethod": "getSofZmanTfilaGRA",
+      "visible": true,
+      "order": 70
+    },
+
+    {
+      "id": "CHATZOS",
+      "resolver": { "type": "FORMULA", "value": "CHATZOS" },
+      "label": { "he": "חצות היום", "en": "Chatzos" },
+      "kosherJavaMethod": "getChatzos",
+      "visible": true,
+      "order": 90
+    },
+    {
+      "id": "MINCHA_GEDOLA_30M",
+      "resolver": { "type": "FORMULA", "value": "MINCHA_GEDOLA_30M" },
+      "label": { "he": "מנחה גדולה (+30ד׳)", "en": "Mincha Gedola (+30m)" },
+      "kosherJavaMethod": "getMinchaGedola30Minutes",
+      "visible": true,
+      "order": 100
+    },
+    {
+      "id": "MINCHA_KETANA_GRA",
+      "resolver": { "type": "FORMULA", "value": "MINCHA_KETANA_GRA" },
+      "label": { "he": "מנחה קטנה (גר\"א)", "en": "Mincha Ketana (GRA)" },
+      "kosherJavaMethod": "getMinchaKetana",
+      "visible": true,
+      "order": 110
+    },
+    {
+      "id": "PLAG_GRA",
+      "resolver": { "type": "FORMULA", "value": "PLAG_GRA" },
+      "label": { "he": "פלג המנחה (גר\"א)", "en": "Plag haMincha (GRA)" },
+      "kosherJavaMethod": "getPlagHamincha",
+      "visible": true,
+      "order": 120
+    },
+
+    {
+      "id": "TZEIT_GEONIM_4P8D",
+      "resolver": { "type": "DEGREES", "value": 4.8, "method": "TZAIS_GEONIM" },
+      "label": { "he": "צאת הכוכבים 4.8°", "en": "Tzais Geonim 4.8°" },
+      "kosherJavaMethod": "getTzaisGeonim4Point8Degrees",
+      "visible": true,
+      "order": 200
+    },
+
+
+    {
+      "id": "TZEIT_RT_72M",
+      "resolver": { "type": "FORMULA", "value": "RT_72" },
+      "label": { "he": "צאת רבנו תם (72׳)", "en": "Tzais Rabbeinu Tam (72m)" },
+      "kosherJavaMethod": "getTzais72",
+      "visible": true,
+      "order": 210
+    }
+  ],
+  "options": {
+    "sunriseSet": ["SEA_LEVEL", "ELEVATION_ADJUSTED"],
+    "defaultMisheyakirDeg": 11.5
+  }
+}

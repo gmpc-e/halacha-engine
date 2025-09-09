@@ -1,0 +1,49 @@
+{
+  "key": "GRA",
+  "displayName": "GRA",
+  "dayModel": "SUNRISE_TO_SUNSET",
+  "zmanim": [
+    {
+      "id": "ALOT_HASHACHAR",
+      "resolver": { "type": "DEGREES", "value": 16.1, "method": "ALOS" },
+      "label": { "he": "עלות השחר", "en": "Alot Hashachar" },
+      "visible": true, "order": 10,
+      "sources": ["GRA day model; alos by degrees"]
+    },
+    {
+      "id": "MISHEYAKIR",
+      "resolver": { "type": "DEGREES", "value": 11.5, "method": "MISHEYAKIR" },
+      "label": { "he": "משיכיר", "en": "Misheyakir" },
+      "visible": true, "order": 20
+    },
+    {
+      "id": "SHEMA_END",
+      "resolver": { "type": "FORMULA", "value": "GRA_SHEMA" },
+      "label": { "he": "סו\"ז ק\"ש (גר\"א)", "en": "Sof Zman Shema (GRA)" },
+      "visible": true, "order": 40
+    },
+    {
+      "id": "TEFILLA_END",
+      "resolver": { "type": "FORMULA", "value": "GRA_TEFILLA" },
+      "label": { "he": "סו\"ז תפילה (גר\"א)", "en": "Sof Zman Tefillah (GRA)" },
+      "visible": true, "order": 50
+    },
+    {
+      "id": "PLAG",
+      "resolver": { "type": "FORMULA", "value": "PLAG_GRA" },
+      "label": { "he": "פלג המנחה (גר\"א)", "en": "Plag Hamincha (GRA)" },
+      "visible": true, "order": 160
+    },
+    {
+      "id": "TZEIT",
+      "resolver": { "type": "DEGREES", "value": 8.5, "method": "TZAIS_GEONIM" },
+      "label": { "he": "צאת הכוכבים", "en": "Tzait Hakochavim" },
+      "visible": true, "order": 200,
+      "notes": { "en": "Community-configurable to 7.083°, 16.1°, 18°." }
+    }
+  ],
+  "options": {
+    "sunriseSet": ["SEA_LEVEL", "ELEVATION_ADJUSTED"],
+    "defaultMisheyakirDeg": 11.5
+  }
+}

@@ -5,10 +5,11 @@ import com.elad.halachatime.core.engine.ZmanIntrospector
 import com.elad.halachatime.core.engine.ZmanResolver
 import com.elad.halachatime.core.model.Place
 import com.elad.halachatime.core.model.ZmanRequest
-import com.elad.halachatime.core.presets.PresetRegistry
 import com.elad.halachatime.core.presets.BoardPreset
+import com.elad.halachatime.core.presets.PresetRegistry
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import io.ktor.http.*
 import io.ktor.serialization.jackson.jackson
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -18,27 +19,33 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.plugins.statuspages.exception
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.http.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
     val externalDirs = resolveExternalPresetDirs()
-    val registry = if (externalDirs.isEmpty()) PresetRegistry.fromDefaultLocations() else PresetRegistry(externalDirs)
+    val registry =
+        if (externalDirs.isEmpty()) PresetRegistry.fromDefaultLocations()
+        else PresetRegistry(externalDirs)
 
     embeddedServer(Netty, port = port) {
         install(StatusPages) {
             exception<Throwable> { call, cause ->
-                call.respond(HttpStatusCode.InternalServerError, mapOf(
-                    "error" to (cause.message ?: "internal error"),
-                    "type" to (cause::class.simpleName ?: "Throwable")
-                ))
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf(
+                        "error" to (cause.message ?: "internal error"),
+                        "type" to (cause::class.simpleName ?: "Throwable")
+                    )
+                )
             }
         }
         install(ContentNegotiation) {
@@ -51,10 +58,10 @@ fun main() {
         routing {
             get("/health") { call.respond(mapOf("status" to "ok")) }
 
-            // --- Profiles ---
+            // --- Profiles (strict, v2-ready) ---
             route("/profiles") {
                 get {
-                    val profiles: List<BoardPreset> = listProfilesCompat(registry)
+                    val profiles: List<BoardPreset> = tryListProfiles(registry)
                     val payload = profiles.map { p -> mapOf("key" to p.key, "displayName" to p.displayName) }
                     call.respond(payload)
                 }
@@ -66,31 +73,89 @@ fun main() {
                 }
             }
 
-            // --- Zmanim (format=utc|local|both) ---
+            // --- Zmanim (format=utc|local|both), versioned via ?scheme=v2 ---
             get("/zmanim") {
                 val q = call.request.queryParameters
                 val date = q["date"]?.let { LocalDate.parse(it) }
                     ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "date (yyyy-MM-dd) required"))
-                val lat = q["lat"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lat required"))
-                val lon = q["lon"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lon required"))
-                val elev = q["elev"]?.toDoubleOrNull() ?: 0.0
+
+                val lat = q["lat"]?.toDoubleOrNull() ?: 31.778
+                val lon = q["lon"]?.toDoubleOrNull() ?: 35.235
+                val elev = q["elev"]?.toDoubleOrNull() ?: 800.0
                 val tzId = q["tz"] ?: "Asia/Jerusalem"
-                val preset = q["preset"] ?: "GRA"
+                val name = q["name"] ?: "Custom"
+
+                val presetKey = q["preset"] ?: "GRA"
                 val format = (q["format"] ?: "both").lowercase()
+                val scheme = (q["scheme"] ?: "").lowercase()
+                val explain = q["explain"]?.toBoolean() ?: false
+                val place = Place(name, lat, lon, elev, tzId)
 
-                val place = Place(q["name"] ?: "Custom", lat, lon, elev, tzId)
-                val res = ZmanResolver.compute(ZmanRequest(date, place, preset))
+                val res = ZmanResolver.compute(ZmanRequest(date, place, presetKey))
 
+                if (scheme == "v2") {
+                    val preset: BoardPreset? = getProfileCompat(registry, presetKey)
+
+                    // Fail-fast: missing preset
+                    if (preset == null) {
+                        return@get call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf(
+                                "error" to "Preset not found",
+                                "presetKey" to presetKey,
+                                "hint" to "Check -Dpreset.dir / PRESET_DIR, the file path, and the 'key' inside the JSON."
+                            )
+                        )
+                    }
+
+                    // v2-only: use items (alias from 'zmanim' is handled by model)
+                    if (preset.items.isEmpty()) {
+                        return@get call.respond(
+                            HttpStatusCode.UnprocessableEntity,
+                            mapOf(
+                                "error" to "Preset has no items",
+                                "presetKey" to presetKey,
+                                "hint" to "Ensure the JSON defines 'items': [...]. ('zmanim' is accepted but mapped into 'items'.)"
+                            )
+                        )
+                    }
+
+                    val items: List<ZmanItemV2> = buildItemsV2Strict(preset, res, explain)
+                    val shaped = when (format) {
+                        "utc" -> items.map { it.copy(local = null) }
+                        "local" -> items.map { it.copy(utc = null) }
+                        else -> items
+                    }
+
+                    val payload = ZmanimResponseV2(
+                        schemeVersion = "v2",
+                        profileKey = presetKey,
+                        meta = ZmanMeta(
+                            date = date.toString(),
+                            lat = lat, lon = lon, elevationM = elev, tz = tzId
+                        ),
+                        items = shaped
+                    )
+                    return@get call.respond(payload)
+                }
+
+                // ---- legacy/default payload (unchanged) ----
                 val payload: Any = when (format) {
                     "utc" -> mapOf(
-                        "preset" to res.preset, "place" to res.place, "date" to res.date,
-                        "results" to res.results, "methodMap" to res.methodMap, "meta" to res.meta
+                        "preset" to getString(res, "preset"),
+                        "place" to getAny(res, "place"),
+                        "date" to getString(res, "date"),
+                        "results" to getMapAny(res, "results"),
+                        "methodMap" to getMapAny(res, "methodMap"),
+                        "meta" to getAny(res, "meta")
                     )
                     "local" -> mapOf(
-                        "preset" to res.preset, "place" to res.place, "date" to res.date,
-                        "resultsLocal" to res.resultsLocal, "methodMap" to res.methodMap, "meta" to res.meta
+                        "preset" to getString(res, "preset"),
+                        "place" to getAny(res, "place"),
+                        "date" to getString(res, "date"),
+                        "resultsLocal" to getMapAny(res, "resultsLocal"),
+                        "methodMap" to getMapAny(res, "methodMap"),
+                        "meta" to getAny(res, "meta")
                     )
                     else -> res
                 }
@@ -102,22 +167,21 @@ fun main() {
                 val q = call.request.queryParameters
                 val date = q["date"]?.let { LocalDate.parse(it) }
                     ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "date (yyyy-MM-dd) required"))
-                val lat = q["lat"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lat required"))
-                val lon = q["lon"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lon required"))
-                val elev = q["elev"]?.toDoubleOrNull() ?: 0.0
+
+                val lat = q["lat"]?.toDoubleOrNull() ?: 31.778
+                val lon = q["lon"]?.toDoubleOrNull() ?: 35.235
+                val elev = q["elev"]?.toDoubleOrNull() ?: 800.0
                 val tzId = q["tz"] ?: "Asia/Jerusalem"
                 val name = q["name"] ?: "Custom"
                 val format = (q["format"] ?: "both").lowercase()
 
                 val place = Place(name, lat, lon, elev, tzId)
-                val raw = ZmanIntrospector.computeAll(date, place) // Map<String, Date?>
+                val raw = ZmanIntrospector.computeAll(date, place) // Map<Any, Date?>
 
                 val zoneId = ZoneId.of(tzId)
                 val fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-                val utcMap = raw.mapValues { (_, d) -> d?.toInstant()?.toString() }
-                val localMap = raw.mapValues { (_, d) -> d?.toInstant()?.atZone(zoneId)?.format(fmt) }
+                val utcMap = raw.mapKeys { (k, _) -> k.toString() }.mapValues { (_, d) -> d?.toInstant()?.toString() }
+                val localMap = raw.mapKeys { (k, _) -> k.toString() }.mapValues { (_, d) -> d?.toInstant()?.atZone(zoneId)?.format(fmt) }
 
                 val payload = when (format) {
                     "utc" -> mapOf(
@@ -151,11 +215,10 @@ fun main() {
                 val q = call.request.queryParameters
                 val date = q["date"]?.let { LocalDate.parse(it) }
                     ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "date (yyyy-MM-dd) required"))
-                val lat = q["lat"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lat required"))
-                val lon = q["lon"]?.toDoubleOrNull()
-                    ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lon required"))
-                val elev = q["elev"]?.toDoubleOrNull() ?: 0.0
+
+                val lat = q["lat"]?.toDoubleOrNull() ?: 31.778
+                val lon = q["lon"]?.toDoubleOrNull() ?: 35.235
+                val elev = q["elev"]?.toDoubleOrNull() ?: 800.0
                 val tzId = q["tz"] ?: "Asia/Jerusalem"
                 val alosDeg = q["alosDeg"]?.toDoubleOrNull() ?: 16.1
                 val tzaisDeg = q["tzaisDeg"]?.toDoubleOrNull() ?: 8.5
@@ -188,9 +251,61 @@ fun main() {
                     )
                 )
             }
+
+            // --- Debug: where are presets coming from?
+            get("/debug/presets") {
+                val fromEnv = System.getenv("PRESET_DIR")
+                val fromProp = System.getProperty("preset.dir")
+                val dir = fromProp ?: fromEnv
+                val files = dir?.let { java.io.File(it).listFiles { f -> f.isFile && f.name.endsWith(".json") } }?.map { it.name } ?: emptyList()
+                val registryInfo = runCatching {
+                    val reg = if (dir.isNullOrBlank()) PresetRegistry.fromDefaultLocations() else PresetRegistry(listOf(java.nio.file.Path.of(dir)))
+                    val method = PresetRegistry::class.declaredFunctions.firstOrNull { it.name in setOf("listProfiles","list","all") && it.parameters.size == 1 }
+                    method?.isAccessible = true
+                    val listed = method?.call(reg) as? List<BoardPreset> ?: emptyList()
+                    mapOf("count" to listed.size, "keys" to listed.map { it.key })
+                }.fold(onSuccess = { it }, onFailure = { ex ->
+                    mapOf("error" to (ex.message ?: ex::class.simpleName.orEmpty()))
+                })
+                call.respond(
+                    mapOf(
+                        "env_PRESET_DIR" to fromEnv,
+                        "prop_preset.dir" to fromProp,
+                        "dirExists" to (dir?.let { java.io.File(it).exists() } ?: false),
+                        "jsonFiles" to files,
+                        "registry" to registryInfo
+                    )
+                )
+            }
         }
     }.start(wait = true)
 }
+
+/* ---------- V2 response models ---------- */
+
+data class ZmanimResponseV2(
+    val schemeVersion: String,
+    val profileKey: String,
+    val meta: ZmanMeta,
+    val items: List<ZmanItemV2>
+)
+
+data class ZmanMeta(
+    val date: String,
+    val lat: Double,
+    val lon: Double,
+    val elevationM: Double,
+    val tz: String
+)
+
+data class ZmanItemV2(
+    val id: String,
+    val label: Map<String, String>?,
+    val utc: String?,
+    val local: String?,
+    val resolver: Any? = null,          // echoed only when explain=true
+    val kosherJavaMethod: String? = null // echoed only when explain=true
+)
 
 /* ---------- Helpers ---------- */
 
@@ -200,20 +315,63 @@ private fun resolveExternalPresetDirs(): List<Path> {
     return listOfNotNull(fromEnv, fromProp).filter { Files.exists(it) }
 }
 
-private fun listProfilesCompat(registry: PresetRegistry): List<BoardPreset> {
-    runCatching { PresetRegistry::class.declaredFunctions.firstOrNull { it.name == "listProfiles" } }
-        .getOrNull()?.let { f -> f.isAccessible = true; @Suppress("UNCHECKED_CAST") return f.call(registry) as List<BoardPreset> }
-    runCatching { PresetRegistry::class.declaredFunctions.firstOrNull { it.name == "list" } }
-        .getOrNull()?.let { f -> f.isAccessible = true; @Suppress("UNCHECKED_CAST") return f.call(registry) as List<BoardPreset> }
-    runCatching { PresetRegistry::class.declaredFunctions.firstOrNull { it.name == "all" } }
-        .getOrNull()?.let { f -> f.isAccessible = true; @Suppress("UNCHECKED_CAST") return f.call(registry) as List<BoardPreset> }
-    error("PresetRegistry missing listProfiles()/list()/all()")
+private fun tryListProfiles(registry: PresetRegistry): List<BoardPreset> {
+    val f = PresetRegistry::class.declaredFunctions.firstOrNull {
+        it.name in setOf("listProfiles", "list", "all") && it.parameters.size == 1
+    } ?: return emptyList()
+    f.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    return runCatching { f.call(registry) as List<BoardPreset> }.getOrElse { emptyList() }
 }
 
 private fun getProfileCompat(registry: PresetRegistry, key: String): BoardPreset? {
-    runCatching { PresetRegistry::class.declaredFunctions.firstOrNull { it.name == "getProfile" && it.parameters.size == 2 } }
-        .getOrNull()?.let { f -> f.isAccessible = true; @Suppress("UNCHECKED_CAST") return f.call(registry, key) as BoardPreset? }
-    runCatching { PresetRegistry::class.declaredFunctions.firstOrNull { it.name == "get" && it.parameters.size == 2 } }
-        .getOrNull()?.let { f -> f.isAccessible = true; @Suppress("UNCHECKED_CAST") return f.call(registry, key) as BoardPreset? }
-    return null
+    val f = PresetRegistry::class.declaredFunctions.firstOrNull {
+        it.name in setOf("getProfile", "get") && it.parameters.size == 2
+    } ?: return null
+    f.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    return runCatching { f.call(registry, key) as BoardPreset? }.getOrNull()
 }
+
+private fun buildItemsV2Strict(
+    preset: BoardPreset,
+    res: Any,
+    explain: Boolean
+): List<ZmanItemV2> {
+    val results      = toStringKeyed(getMapAny(res, "results"))
+    val resultsLocal = toStringKeyed(getMapAny(res, "resultsLocal"))
+    val methodMap    = toStringKeyed(getMapAny(res, "methodMap"))
+
+    return preset.items
+        .sortedBy { it.order ?: Int.MAX_VALUE }
+        .map { bi ->
+            val id = bi.id
+            val label = bi.label
+            val utc = results[id]?.toString()
+            val local = resultsLocal[id]?.toString()
+            val resolverEcho = if (explain) bi.resolver else null
+            val kj = if (explain) (bi.kosherJavaMethod ?: methodMap[id]?.toString()) else null
+
+            ZmanItemV2(
+                id = id,
+                label = label,
+                utc = utc,
+                local = local,
+                resolver = resolverEcho,
+                kosherJavaMethod = kj
+            )
+        }
+}
+
+private fun getAny(instance: Any, name: String): Any? =
+    instance::class.memberProperties.firstOrNull { it.name == name }?.let { (it as KProperty1<Any, *>).get(instance) }
+
+private fun getString(instance: Any, name: String): String? = (getAny(instance, name) as? String)
+
+@Suppress("UNCHECKED_CAST")
+private fun getMapAny(instance: Any, name: String): Map<Any?, Any?> =
+    (getAny(instance, name) as? Map<Any?, Any?>) ?: emptyMap()
+
+private fun toStringKeyed(src: Map<Any?, Any?>): Map<String, Any?> =
+    if (src.isEmpty()) emptyMap()
+    else buildMap(src.size) { for ((k, v) in src) put(k?.toString() ?: "null", v) }

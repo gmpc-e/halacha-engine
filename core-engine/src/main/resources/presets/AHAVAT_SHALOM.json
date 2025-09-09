@@ -1,0 +1,44 @@
+{
+  "key": "AHAVAT_SHALOM",
+  "displayName": "Ahavat Shalom",
+  "dayModel": "ALOS_TO_TZAIS",
+  "zmanim": [
+    { "id": "ALOT_HASHACHAR",
+      "resolver": { "type": "DEGREES", "value": 16.1, "method": "ALOS" },
+      "label": {"he":"עלות השחר","en":"Alot Hashachar"},
+      "order": 10,
+      "kosherJavaMethod": "getAlos16Point1Degrees"
+    },
+    { "id": "MISHEYAKIR",
+      "resolver": { "type": "DEGREES", "value": 11.5, "method": "MISHEYAKIR" },
+      "label": {"he":"משיכיר","en":"Misheyakir"},
+      "order": 20,
+      "kosherJavaMethod": "getMisheyakir11Point5Degrees"
+    },
+    { "id": "SHEMA_END",
+      "resolver": { "type": "FORMULA", "value": "GRA_SHEMA" },
+      "label": {"he":"סו\"ז ק\"ש (גר\"א)","en":"Sof Zman Shema (GRA)"},
+      "order": 40,
+      "kosherJavaMethod": "getSofZmanShmaGRA"
+    },
+    { "id": "TEFILLA_END",
+      "resolver": { "type": "FORMULA", "value": "GRA_TEFILLA" },
+      "label": {"he":"סו\"ז תפילה (גר\"א)","en":"Sof Zman Tefillah (GRA)"},
+      "order": 50,
+      "kosherJavaMethod": "getSofZmanTfilaGRA"
+    },
+    { "id": "PLAG",
+      "resolver": { "type": "FORMULA", "value": "PLAG_AHAVAT_SHALOM" },
+      "label": {"he":"פלג (אהבת שלום)","en":"Plag (Ahavat Shalom)"},
+      "order": 160,
+      "kosherJavaMethod": "getPlagAhavatShalom"
+    },
+    { "id": "TZEIT",
+      "resolver": { "type": "DEGREES", "value": 3.8, "method": "TZAIS_GEONIM" },
+      "label": {"he":"צאת 3.8°","en":"Tzais 3.8°"},
+      "order": 200,
+      "kosherJavaMethod": "getTzaisGeonim3Point8Degrees"
+    }
+  ],
+  "options": { "sunriseSet": ["SEA_LEVEL","ELEVATION_ADJUSTED"], "defaultMisheyakirDeg": 11.5 }
+}
