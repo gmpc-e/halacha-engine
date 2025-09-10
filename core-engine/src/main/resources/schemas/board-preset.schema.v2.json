@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/board-preset.schema.v2.json",
+  "title": "BoardPreset v2",
+  "type": "object",
+  "required": ["key", "displayName", "zmanim"],
+  "properties": {
+    "key": { "type": "string", "pattern": "^[A-Z0-9_\\-]+$" },
+    "displayName": { "type": "string" },
+    "dayModel": {
+      "type": "string",
+      "enum": ["SUNRISE_TO_SUNSET", "ALOS_TO_TZAIS"]
+    },
+    "zmanim": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "resolver"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": {
+            "type": "object",
+            "properties": {
+              "he": { "type": "string" },
+              "en": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "visible": { "type": "boolean", "default": true },
+          "order": { "type": "integer" },
+          "sources": { "type": "array", "items": { "type": "string" } },
+          "notes": {
+            "type": "object",
+            "properties": {
+              "he": { "type": "string" },
+              "en": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "kosherJavaMethod": { "type": "string" },
+          "resolver": {
+            "type": "object",
+            "oneOf": [
+              {
+                "required": ["type", "value", "method"],
+                "properties": {
+                  "type": { "const": "DEGREES" },
+                  "value": { "type": "number" },
+                  "method": {
+                    "type": "string",
+                    "enum": ["ALOS","MISHEYAKIR","TZAIS_GEONIM"]
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "required": ["type", "minutes", "mode"],
+                "properties": {
+                  "type": { "const": "MINUTES" },
+                  "minutes": { "type": "integer", "minimum": 0 },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["ALOS_BEFORE_SUNRISE_SEA","TZAIS_AFTER_SUNSET_SEA"]
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "required": ["type", "value"],
+                "properties": {
+                  "type": { "const": "FORMULA" },
+                  "value": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "options": {
+      "type": "object",
+      "properties": {
+        "sunriseSet": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["SEA_LEVEL","ELEVATION_ADJUSTED"] }
+        },
+        "defaultMisheyakirDeg": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

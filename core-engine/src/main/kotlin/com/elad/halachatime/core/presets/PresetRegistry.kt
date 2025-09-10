@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.everit.json.schema.Schema
-import org.everit.json.schema.ValidationException
 import org.everit.json.schema.loader.SchemaLoader
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -23,7 +22,6 @@ class PresetRegistry(
         configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
 
-    // v2 schema only
     private val schema: Schema by lazy {
         val name = "schemas/board-preset.schema.v2.json"
         val stream = javaClass.classLoader.getResourceAsStream(name)
@@ -35,12 +33,10 @@ class PresetRegistry(
 
     private val merged: Map<String, BoardPreset> by lazy {
         val found = mutableListOf<Loaded>()
+        // 1) Classpath: /presets/*.json
         found += loadFromClasspathDir("presets")
+        // 2) External dirs (-Dpreset.dir / PRESET_DIR / legacy profiles/)
         found += loadFromExternalDirs()
-
-        if (found.isEmpty()) {
-            System.err.println("[PresetRegistry] WARNING: no valid v2 presets found")
-        }
 
         val out = linkedMapOf<String, BoardPreset>()
         for (x in found) {
@@ -57,7 +53,7 @@ class PresetRegistry(
     fun listProfiles(): List<BoardPreset> = merged.values.sortedBy { it.displayName }
     fun getProfile(key: String): BoardPreset? = merged[key]
 
-    // ---------- loaders ----------
+    // -------- loading helpers --------
 
     private fun loadFromExternalDirs(): List<Loaded> {
         if (externalDirs.isEmpty()) return emptyList()
@@ -73,7 +69,7 @@ class PresetRegistry(
                             validateOrThrow(json, fileId)
                             val preset: BoardPreset = mapper.readValue(json)
                             out += Loaded(fileId, preset)
-                            println("[PresetRegistry] OK ${path.fileName} key='${preset.key}', items=${preset.items.size}")
+                            println("[PresetRegistry] OK ${path.fileName} key='${preset.key}', schema='v2', items=${preset.items.size}")
                         }.onFailure { ex ->
                             System.err.println("[PresetRegistry] SKIP invalid preset: ${path.fileName} → ${ex.message}")
                         }
@@ -101,7 +97,7 @@ class PresetRegistry(
                                         validateOrThrow(json, fileId)
                                         val preset: BoardPreset = mapper.readValue(json)
                                         out += Loaded(fileId, preset)
-                                        println("[PresetRegistry] OK ${path.fileName} key='${preset.key}', items=${preset.items.size}")
+                                        println("[PresetRegistry] OK ${path.fileName} key='${preset.key}', schema='v2', items=${preset.items.size}")
                                     }.onFailure { ex ->
                                         System.err.println("[PresetRegistry] SKIP invalid preset: ${path.fileName} → ${ex.message}")
                                     }
@@ -110,6 +106,7 @@ class PresetRegistry(
                     }
                 }
                 "jar" -> {
+                    // When running from a JAR; enumerate /presets/*.json entries
                     val spec = root.file // e.g. file:/.../app.jar!/presets
                     val bang = spec.indexOf("!")
                     if (bang > 0) {
@@ -124,7 +121,7 @@ class PresetRegistry(
                                     validateOrThrow(json, fileId)
                                     val preset: BoardPreset = mapper.readValue(json)
                                     out += Loaded(fileId, preset)
-                                    println("[PresetRegistry] OK $fileId key='${preset.key}', items=${preset.items.size}")
+                                    println("[PresetRegistry] OK $fileId key='${preset.key}', schema='v2', items=${preset.items.size}")
                                 }.onFailure { ex ->
                                     System.err.println("[PresetRegistry] SKIP invalid preset: $fileId → ${ex.message}")
                                 }
@@ -138,31 +135,24 @@ class PresetRegistry(
     }
 
     private fun validateOrThrow(json: String, fileId: String) {
-        try {
+        runCatching {
             schema.validate(JSONObject(json))
-        } catch (ve: ValidationException) {
-            val subs = if (ve.causingExceptions.isEmpty()) listOf(ve) else ve.causingExceptions
-            val msg = buildString {
-                append("INVALID $fileId: ${subs.size} schema violations found")
-                subs.take(12).forEach { sub ->
-                    append("\n  • ${sub.pointerToViolation.ifBlank { "#"} }: ${sub.message}")
-                }
-            }
-            throw IllegalArgumentException(msg)
+        }.onFailure { ex ->
+            throw IllegalArgumentException("INVALID $fileId: ${ex.message}")
         }
     }
 
     companion object {
         fun fromDefaultLocations(): PresetRegistry {
             val cwd = Path.of("").toAbsolutePath().normalize()
+
             val presetDirProp = System.getProperty("preset.dir")?.takeIf { it.isNotBlank() }?.let { Path.of(it) }
             val presetDirEnv  = System.getenv("PRESET_DIR")?.takeIf { it.isNotBlank() }?.let { Path.of(it) }
-            val profilesDir   = cwd.resolve("profiles") // legacy optional
+            val profilesDir   = cwd.resolve("profiles") // legacy folder, optional
 
             val candidates = listOfNotNull(presetDirProp, presetDirEnv, profilesDir)
                 .filter { Files.exists(it) && Files.isDirectory(it) }
 
-            // NOTE: This registry always loads classpath /presets as well.
             return PresetRegistry(candidates)
         }
     }

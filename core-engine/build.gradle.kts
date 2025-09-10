@@ -2,6 +2,10 @@ plugins {
     kotlin("jvm")
 }
 
+repositories {
+    mavenCentral()
+}
+
 kotlin {
     jvmToolchain(17)
 }
@@ -18,7 +22,10 @@ dependencies {
     implementation("com.github.erosb:everit-json-schema:1.14.6")
     implementation("org.json:json:20240303")
 
-    // Tests
+    // ✅ REMOVE (was on main classpath and not needed)
+    // implementation("junit:junit:4.12")
+
+    // Tests (JUnit5)
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
 }
@@ -27,32 +34,26 @@ tasks.test {
     useJUnitPlatform()
 }
 
-/**
- * Validate preset JSONs against the schema before check/build.
- *
- * Usage:
- *   ./gradlew :core-engine:validatePresets \
- *     -Dpreset.dir=core-engine/src/main/resources/presets
- *
- * Or export PRESET_DIR and omit -D:
- *   export PRESET_DIR=core-engine/src/main/resources/presets
- *   ./gradlew :core-engine:validatePresets
- */
+// ---- CLI: validate presets on build/check ----
 tasks.register<JavaExec>("validatePresets") {
     group = "verification"
-    description = "Validate board preset JSONs against the schema"
+    description = "Validate board preset JSONs against the v2 schema"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.elad.halachatime.core.presets.PresetValidateCli")
-
-    // Prefer -Dpreset.dir, then PRESET_DIR, then default to module resources
-    val defaultDir = file("src/main/resources/presets").absolutePath
-    val dirFromSysProp = System.getProperty("preset.dir")
-    val dirFromEnv = System.getenv("PRESET_DIR")
-    val effectiveDir = dirFromSysProp ?: dirFromEnv ?: defaultDir
-
-    jvmArgs("-Dpreset.dir=$effectiveDir")
+    jvmArgs(
+        "-Dpreset.dir=" + (
+                System.getProperty("preset.dir")
+                    ?: System.getenv("PRESET_DIR")
+                    ?: "${project.projectDir}/src/main/resources/presets"
+                )
+    )
 }
 
-// Gate the lifecycle tasks on validation
 tasks.named("check") { dependsOn("validatePresets") }
-tasks.named("build") { dependsOn("validatePresets") }
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "failed", "skipped")
+        showStandardStreams = true   // <— show println() output
+    }
+}

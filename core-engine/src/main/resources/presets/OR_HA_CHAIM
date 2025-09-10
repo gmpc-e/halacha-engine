@@ -1,0 +1,133 @@
+{
+  "key": "OR_HA_CHAIM",
+  "displayName": "Or HaChaim",
+  "dayModel": "ALOS_TO_TZAIS",
+  "zmanim": [
+    {
+      "id": "ALOT_HASHACHAR",
+      "resolver": { "type": "DEGREES", "value": 16.1, "method": "ALOS" },
+      "label": { "he": "עלות השחר", "en": "Alot Hashachar" },
+      "order": 10,
+      "kosherJavaMethod": "getAlos16Point1Degrees"
+    },
+    {
+      "id": "MISHEYAKIR",
+      "resolver": { "type": "DEGREES", "value": 11.5, "method": "MISHEYAKIR" },
+      "label": { "he": "זמן טלית ותפילין (משיכיר)", "en": "Misheyakir (Tallis & Tefillin)" },
+      "order": 20,
+      "kosherJavaMethod": "getMisheyakir11Point5Degrees"
+    },
+
+    {
+      "id": "SUNRISE_SEA_LEVEL",
+      "resolver": { "type": "FORMULA", "value": "SEA_LEVEL_SUNRISE" },
+      "label": { "he": "זריחה מישורית", "en": "Sea-level Sunrise" },
+      "order": 30,
+      "kosherJavaMethod": "getSeaLevelSunrise"
+    },
+    {
+      "id": "SUNRISE_VISIBLE",
+      "resolver": { "type": "FORMULA", "value": "VISIBLE_SUNRISE" },
+      "label": { "he": "זריחה נראית", "en": "Visible Sunrise" },
+      "order": 31,
+      "kosherJavaMethod": "getSunrise"
+    },
+
+    {
+      "id": "SHEMA_END_MGA",
+      "resolver": { "type": "FORMULA", "value": "MGA_SHEMA_ALOS_TO_RT" },
+      "label": { "he": "סו\"ז קריאת שמע (מג\"א)", "en": "Sof Zman Shema (MGA)" },
+      "order": 40,
+      "kosherJavaMethod": "getSofZmanShmaMGA"
+    },
+    {
+      "id": "SHEMA_END_GRA",
+      "resolver": { "type": "FORMULA", "value": "GRA_SHEMA" },
+      "label": { "he": "סו\"ז קריאת שמע (גר\"א)", "en": "Sof Zman Shema (GRA)" },
+      "order": 41,
+      "kosherJavaMethod": "getSofZmanShmaGRA"
+    },
+
+    {
+      "id": "TEFILLA_END_MGA",
+      "resolver": { "type": "FORMULA", "value": "MGA_TEFILLA_ALOS_TO_RT" },
+      "label": { "he": "סו\"ז תפילה (מג\"א)", "en": "Sof Zman Tefillah (MGA)" },
+      "order": 50,
+      "kosherJavaMethod": "getSofZmanTfilaMGA"
+    },
+    {
+      "id": "TEFILLA_END_GRA",
+      "resolver": { "type": "FORMULA", "value": "GRA_TEFILLA" },
+      "label": { "he": "סו\"ז תפילה (גר\"א)", "en": "Sof Zman Tefillah (GRA)" },
+      "order": 51,
+      "kosherJavaMethod": "getSofZmanTfilaGRA"
+    },
+
+    {
+      "id": "CHATZOT",
+      "resolver": { "type": "FORMULA", "value": "ASTRONOMICAL_TRANSIT" },
+      "label": { "he": "חצות היום והלילה", "en": "Astronomical Chatzot (Transit)" },
+      "order": 60,
+      "kosherJavaMethod": "getChatzos"
+    },
+
+    {
+      "id": "MINCHA_GEDOLA_START",
+      "resolver": { "type": "FORMULA", "value": "CHATZOT_PLUS_30_MIN" },
+      "label": { "he": "תחילת זמן מנחה גדולה", "en": "Mincha Gedola (Start)" },
+      "order": 70,
+      "kosherJavaMethod": "getMinchaGedola30Minutes"
+    },
+    {
+      "id": "MINCHA_KETANA",
+      "resolver": { "type": "FORMULA", "value": "GRA_MINCHA_KETANA" },
+      "label": { "he": "מנחה קטנה", "en": "Mincha Ketana" },
+      "order": 80,
+      "kosherJavaMethod": "getMinchaKetana"
+    },
+
+    {
+      "id": "PLAG",
+      "resolver": { "type": "FORMULA", "value": "PLAG_OR_HACHAIM" },
+      "label": { "he": "פלג המנחה", "en": "Plag Hamincha" },
+      "order": 160,
+      "kosherJavaMethod": "getPlagHamincha"
+    },
+
+    {
+      "id": "SUNSET_SEA_LEVEL",
+      "resolver": { "type": "FORMULA", "value": "SEA_LEVEL_SUNSET" },
+      "label": { "he": "שקיעה מישורית", "en": "Sea-level Sunset" },
+      "order": 170,
+      "kosherJavaMethod": "getSeaLevelSunset"
+    },
+    {
+      "id": "SUNSET_VISIBLE",
+      "resolver": { "type": "FORMULA", "value": "VISIBLE_SUNSET" },
+      "label": { "he": "שקיעה נראית", "en": "Visible Sunset" },
+      "order": 171,
+      "kosherJavaMethod": "getSunset"
+    },
+
+    {
+      "id": "TZEIT_GEONIM",
+      "resolver": { "type": "DEGREES", "value": 5.95, "method": "TZAIS_GEONIM" },
+      "label": { "he": "צאת הכוכבים (≈5.95°)", "en": "Tzais (≈5.95° Geonim)" },
+      "order": 200,
+      "kosherJavaMethod": "getTzaisGeonim5Point95Degrees"
+    },
+    {
+      "id": "TZEIT_RT",
+      "resolver": { "type": "FORMULA", "value": "RT_72_MIN_AFTER_VISIBLE_SUNSET" },
+      "label": { "he": "צאת רבנו תם (~72׳)", "en": "Tzais Rabbeinu Tam (~72 min)" },
+      "order": 210,
+      "kosherJavaMethod": "getTzaisRT"
+    }
+  ],
+  "options": {
+    "sunriseSet": ["SEA_LEVEL", "ELEVATION_ADJUSTED"],
+    "defaultMisheyakirDeg": 11.5,
+    "plagModel": "GRA_TEMPORAL_HOUR",
+    "plagReferenceTzaisId": "TZEIT_GEONIM"
+  }
+}

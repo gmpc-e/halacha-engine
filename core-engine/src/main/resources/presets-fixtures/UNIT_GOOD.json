@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "v2",
+  "key": "UNIT_GOOD",
+  "displayName": "Unit Good",
+  "items": [
+    {
+      "id": "ALOT_HASHACHAR",
+      "label": { "en": "Alot", "he": "עלות" },
+      "resolver": { "type": "DEGREES", "kind": "ALOS", "degrees": 16.1 },
+      "kosherJavaMethod": "getAlos16Point1Degrees",
+      "visible": true,
+      "order": 10
+    },
+    {
+      "id": "SHEMA_END",
+      "label": { "en": "Sof Shema (GRA)", "he": "סו\"ז ק\"ש (גר\"א)" },
+      "resolver": { "type": "FORMULA", "name": "GRA_SHEMA" },
+      "kosherJavaMethod": "getSofZmanShmaGRA",
+      "visible": true,
+      "order": 50
+    },
+    {
+      "id": "TZEIT",
+      "label": { "en": "Tzais 8.5°", "he": "צאת 8.5°" },
+      "resolver": { "type": "DEGREES", "kind": "TZAIS_GEONIM", "degrees": 8.5 },
+      "kosherJavaMethod": "getTzaisGeonim8Point5Degrees",
+      "visible": true,
+      "order": 210
+    }
+  ],
+  "options": {
+    "sunriseSet": ["SEA_LEVEL", "ELEVATION_ADJUSTED"],
+    "defaultMisheyakirDeg": 11.5
+  }
+}

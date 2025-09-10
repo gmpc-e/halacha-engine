@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "v2",
+  "key": "UNIT_BAD",
+  "displayName": "Unit Bad",
+  "items": [
+    {
+      "id": "BROKEN",
+      "label": { "en": "Broken" },
+      "resolver": { "type": "MINUTES" }
+    }
+  ]
+}
