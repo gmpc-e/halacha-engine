@@ -7,6 +7,9 @@ import com.elad.halachatime.core.model.Place
 import com.elad.halachatime.core.model.ZmanRequest
 import com.elad.halachatime.core.presets.BoardPreset
 import com.elad.halachatime.core.presets.PresetRegistry
+import com.elad.halachatime.core.presets.PresetValidator
+import com.elad.halachatime.core.presets.ValidationIssue
+import com.elad.halachatime.core.presets.ValidationReport
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.ktor.http.*
@@ -26,6 +29,9 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
 
 /** Public application module used by both main() and tests */
 fun Application.halachaModule(
@@ -55,24 +61,37 @@ fun Application.halachaModule(
                 if (profile == null) call.respond(HttpStatusCode.NotFound, mapOf("error" to "Profile '$key' not found"))
                 else call.respond(profile)
             }
-            post("/validate/preset") {
-                val body = call.receiveText()
-                val sizeKb = body.toByteArray(Charsets.UTF_8).size / 1024.0
-                val report = com.elad.halachatime.core.presets.PresetValidator.validateString(body)
+            // (No validator route nested here anymore)
+        }
 
-                val who = report.detectedKey ?: "unknown"
-                call.application.environment.log.info("[Validate] Received preset key='{}' size={}KB valid={} items={}",
-                    who, String.format("%.1f", sizeKb), report.valid, report.itemCount)
+        // --- Smart Board JSON Validator (TOP-LEVEL) ---
+        post("/validate/preset") {
+            val body = call.receiveText()
+            val sizeKb = body.toByteArray(Charsets.UTF_8).size / 1024.0
 
-                report.warnings.forEach {
-                    call.application.environment.log.warn("[Validate] {}: {}", it.pointer, it.message)
-                }
-                report.errors.forEach {
-                    call.application.environment.log.error("[Validate] {}: {}", it.pointer, it.message)
-                }
-
-                call.respond(report)
+            val report = try {
+                PresetValidator.validateString(body)
+            } catch (t: Throwable) {
+                // Never leak a 500 to the client; always return structured JSON
+                call.application.environment.log.error("Validate failed", t)
+                ValidationReport(
+                    valid = false,
+                    detectedKey = null,
+                    itemCount = 0,
+                    errors = listOf(ValidationIssue("#", "Internal error: ${t.message}")),
+                    hint = "Ensure JSON is well-formed and v2 schema resource is on classpath."
+                )
             }
+
+            val who = report.detectedKey ?: "unknown"
+            call.application.environment.log.info(
+                "[Validate] Received preset key='{}' size={}KB valid={} items={}",
+                who, String.format("%.1f", sizeKb), report.valid, report.itemCount
+            )
+            report.warnings.forEach { call.application.environment.log.warn("[Validate] {}: {}", it.pointer, it.message) }
+            report.errors.forEach   { call.application.environment.log.error("[Validate] {}: {}", it.pointer, it.message) }
+
+            call.respond(HttpStatusCode.OK, report)
         }
 
         // --- Zmanim (format=utc|local|both), versioned via ?scheme=v2 (strict: no fallback) ---

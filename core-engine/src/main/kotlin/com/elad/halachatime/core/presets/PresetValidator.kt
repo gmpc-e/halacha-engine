@@ -30,6 +30,15 @@ object PresetValidator {
 
     fun validateString(json: String): ValidationReport {
         val root = JSONObject(json)
+        // --- Compatibility: accept either "items" or "zmanim" (schema expects "zmanim") ---
+        if (!root.has("zmanim") && root.has("items")) {
+            // copy items -> zmanim and remove items so schema doesn't flag "extraneous key [items]"
+            val items = root.getJSONArray("items")
+            root.put("zmanim", items)
+            root.remove("items")
+        }
+        // -------------------------------------------------------------------------------
+
         val key = root.optString("key", null)
         val items = root.optJSONArray("items") ?: root.optJSONArray("zmanim")
         val itemCount = items?.length() ?: 0
