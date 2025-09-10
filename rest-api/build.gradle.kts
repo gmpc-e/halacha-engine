@@ -21,6 +21,7 @@ dependencies {
 
 
 
+
     // Jackson JavaTime module (fixes JavaTimeModule unresolved)
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2")
 
@@ -34,6 +35,14 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
     testImplementation("io.ktor:ktor-server-test-host:2.3.12")
+    // Ktor server test harness (2.x):
+    // Ktor server test harness (2.x):
+    testImplementation("io.ktor:ktor-server-test-host:2.3.12")
+// HTTP client bits used inside testApplication { client.post { ... } }
+    testImplementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    testImplementation("io.ktor:ktor-client-core:2.3.12")
+    testImplementation("io.ktor:ktor-client-java:2.3.12")
+// or CIO/OkHttp, any one engine
 }
 
 application {

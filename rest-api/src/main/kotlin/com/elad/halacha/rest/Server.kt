@@ -1,5 +1,5 @@
 package com.elad.halacha.rest
-
+import io.ktor.server.request.receiveText
 import com.elad.halachatime.core.engine.ShaotZmaniyot
 import com.elad.halachatime.core.engine.ZmanIntrospector
 import com.elad.halachatime.core.engine.ZmanResolver
@@ -54,6 +54,24 @@ fun Application.halachaModule(
                 val profile: BoardPreset? = getProfileCompat(registry, key)
                 if (profile == null) call.respond(HttpStatusCode.NotFound, mapOf("error" to "Profile '$key' not found"))
                 else call.respond(profile)
+            }
+            post("/validate/preset") {
+                val body = call.receiveText()
+                val sizeKb = body.toByteArray(Charsets.UTF_8).size / 1024.0
+                val report = com.elad.halachatime.core.presets.PresetValidator.validateString(body)
+
+                val who = report.detectedKey ?: "unknown"
+                call.application.environment.log.info("[Validate] Received preset key='{}' size={}KB valid={} items={}",
+                    who, String.format("%.1f", sizeKb), report.valid, report.itemCount)
+
+                report.warnings.forEach {
+                    call.application.environment.log.warn("[Validate] {}: {}", it.pointer, it.message)
+                }
+                report.errors.forEach {
+                    call.application.environment.log.error("[Validate] {}: {}", it.pointer, it.message)
+                }
+
+                call.respond(report)
             }
         }
 
